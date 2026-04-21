@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สรุปข้อมูล NCD รพ.นครพิงค์</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Prompt', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 1200px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        select {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: 1px solid #bdc3c7;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 600px;
+            font-family: inherit;
+        }
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+    <!-- Import Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <h1>สรุปข้อมูลการให้บริการ NCD โรงพยาบาลนครพิงค์ ปีงบประมาณ 2569</h1>
+        
+        <div class="controls">
+            <label for="metricSelect" style="font-size: 18px; font-weight: 600;">เลือกตัวชี้วัด:</label>
+            <select id="metricSelect" onchange="updateChart()">
+                <!-- Options will be populated by JS -->
+            </select>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <div class="footer">
+            จัดทำโดย คณะกรรมการ NCD โรงพยาบาลนครพิงค์
+        </div>
+    </div>
+
+    <script>
+        // Data from Python
+        const chartData = {"1. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e44\u0e02\u0e49\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14": [37717, 28666, 10058, 3681, 2624, 2444, 2539, 158, 60, 9051], "2. \u0e2d\u0e32\u0e22\u0e38\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22 \u0e13 1 \u0e15.\u0e04. 2025": [63.54, 63.2, 65.5, 58.82, 68.08, 64.68, 61.8, 78.68, 17.77, 64.64], "3. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1e\u0e28\u0e0a\u0e32\u0e22": [42.52, 43.17, 46.67, 36.78, 39.75, 36.66, 46.59, 34.81, 35.0, 40.47], "4. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e44\u0e17\u0e22": [93.18, 92.31, 95.05, 83.37, 97.1, 97.71, 95.86, 99.37, 88.33, 95.95], "5. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35 BMI": [55.13, 64.23, 75.71, 53.55, 71.91, 86.17, 85.31, 94.3, 36.67, 26.34], "6. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48 BMI \u0e1b\u0e01\u0e15\u0e34": [27.18, 26.63, 25.31, 25.47, 27.61, 24.69, 24.52, 44.3, 54.55, 31.46], "7. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e32\u0e23\u0e31\u0e1a\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23\u0e43\u0e19\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13": [84.17, 82.93, 97.73, 97.85, 90.93, 94.15, 97.83, 97.47, 95.0, 88.08], "8. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19": [15882, 11979, 4642, 1222, 933, 896, 1760, 79, 51, 3903], "9. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19": [42.11, 41.79, 46.15, 33.2, 35.56, 36.66, 69.32, 50.0, 85.0, 43.12], "10. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": [33133, 25614, 9188, 3483, 2515, 2349, 2046, 153, 18, 7519], "11. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": [87.85, 89.35, 91.35, 94.62, 95.85, 96.11, 80.58, 96.84, 30.0, 83.07], "12. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": [11298, 8927, 3772, 1024, 824, 801, 1267, 74, 9, 2371], "13. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": [29.95, 31.14, 37.5, 27.82, 31.4, 32.77, 49.9, 46.84, 15.0, 26.2], "14. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HbA1c": [28.05, 29.46, 46.4, 45.88, 3.51, 6.83, 52.74, 5.06, 70.0, 23.59], "15. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HbA1c < 7": [58.89, 59.56, 57.12, 81.11, 57.61, 58.08, 37.27, 50.0, 21.43, 56.25], "16. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 LDL": [40.69, 38.74, 65.81, 50.1, 5.11, 12.77, 49.67, 4.43, 60.0, 46.86], "17. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL < 100": [52.32, 55.29, 62.08, 29.5, 40.3, 37.18, 60.43, 71.43, 33.33, 44.54], "18. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e27\u0e31\u0e14\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": [24.52, 28.18, 42.37, 5.76, 1.49, 78.15, 59.31, 78.48, 6.67, 12.9], "19. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e38\u0e21\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19\u0e44\u0e14\u0e49\u0e14\u0e35": [55.24, 54.59, 56.59, 53.77, 51.28, 46.91, 58.76, 51.61, 100.0, 59.76], "20. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 MicroAlb": [11.33, 13.35, 15.24, 41.48, 1.49, 2.7, 19.42, 3.16, 36.67, 4.91], "21. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 MicroAlb \u0e1b\u0e01\u0e15\u0e34 (< 30)": [26.78, 27.77, 20.03, 43.48, 15.38, 15.15, 9.74, 0.0, 31.82, 18.24], "22. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08\u0e15\u0e32 (\u0e19\u0e28. DM)": [16.64, 13.37, 11.89, 28.48, 7.29, 27.79, 18.12, 15.19, 11.76, 26.7], "23. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e15\u0e32\u0e1b\u0e01\u0e15\u0e34 (\u0e43\u0e19\u0e1c\u0e39\u0e49\u0e17\u0e35\u0e48\u0e15\u0e23\u0e27\u0e08\u0e15\u0e32)": [50.96, 71.08, 61.96, 92.53, 63.24, 86.35, 57.99, 91.67, 100.0, 20.06], "24. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 IHD": [7.01, 7.79, 9.69, 0.63, 2.07, 1.53, 20.67, 3.92, 0.0, 4.35], "25. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 CVA": [4.32, 4.61, 6.94, 2.73, 1.47, 2.47, 2.64, 7.84, 0.0, 3.34], "26. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21": [17.86, 20.23, 22.83, 6.46, 18.65, 16.29, 37.16, 34.18, 19.61, 10.58], "27. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21": [14.1, 14.96, 17.07, 5.4, 11.17, 12.13, 42.86, 32.03, 0.0, 11.15], "28. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e31\u0e14\u0e40\u0e17\u0e49\u0e32": [0.25, 0.23, 0.28, 0.08, 0.11, 0.11, 0.23, 0.0, 0.0, 0.31], "29. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ASA": [19.34, 21.95, 29.21, 8.56, 19.4, 15.79, 36.47, 32.91, 3.33, 11.08], "30. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ACEI (\u0e19\u0e28. HT)": [18.28, 21.31, 19.11, 32.62, 24.41, 26.56, 19.45, 26.14, 38.89, 7.98], "31. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ARB (\u0e19\u0e28. HT)": [28.1, 32.64, 36.57, 40.48, 37.89, 38.83, 36.02, 41.18, 16.67, 12.65], "32. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 Statin": [29.51, 35.11, 31.41, 53.98, 56.33, 53.48, 34.82, 57.59, 40.0, 11.77], "33. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL >= 100 \u0e41\u0e15\u0e48\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e43\u0e0a\u0e49 Statin": [69.43, 59.68, 66.33, 42.0, 62.5, 47.96, 67.33, 50.0, 33.33, 90.01], "34. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e23\u0e27\u0e08\u0e1f\u0e31\u0e19": [4.82, 5.18, 4.5, 5.24, 3.64, 7.7, 7.39, 72.15, 5.88, 3.72], "35. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32 (\u0e19\u0e28. DM)": [4.8, 5.18, 1.68, 0.57, 0.32, 33.15, 11.88, 25.32, 9.8, 3.66], "36. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32\u0e40\u0e2a\u0e35\u0e48\u0e22\u0e07\u0e15\u0e48\u0e33 (\u0e43\u0e19\u0e1c\u0e39\u0e49\u0e17\u0e35\u0e48\u0e15\u0e23\u0e27\u0e08)": [96.46, 96.77, 94.87, 100.0, 100.0, 99.66, 92.82, 100.0, 100.0, 95.1], "37. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e2a\u0e39\u0e1a\u0e1a\u0e38\u0e2b\u0e23\u0e35\u0e48": [0.09, 0.09, 0.09, 0.0, 0.0, 0.22, 0.06, 0.0, 0.0, 0.08], "38. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Chol": [52.38, 54.85, 53.89, 46.56, 5.03, 12.64, 39.46, 4.43, 60.0, 44.59], "39. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Chol < 200": [84.55, 86.81, 82.32, 63.07, 63.64, 67.96, 80.74, 100.0, 72.22, 75.74], "40. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 TG": [35.68, 32.85, 54.08, 46.56, 5.03, 12.56, 37.14, 4.43, 60.0, 44.62], "41. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 TG < 150": [74.89, 74.41, 75.14, 70.54, 75.0, 73.62, 72.64, 71.43, 88.89, 76.01], "42. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HDL": [35.54, 32.71, 53.99, 46.48, 4.99, 12.4, 36.55, 4.43, 60.0, 44.47], "43. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HDL \u0e1b\u0e01\u0e15\u0e34": [66.03, 64.3, 64.18, 72.12, 74.05, 69.64, 54.96, 71.43, 66.67, 70.06], "44. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Cr": [52.3, 50.66, 80.11, 51.26, 10.25, 20.83, 85.82, 23.42, 53.33, 57.47], "45. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Cr < 1": [62.22, 60.33, 59.67, 79.92, 69.14, 74.66, 40.66, 48.65, 100.0, 67.49], "46. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Uric": [23.6, 19.86, 28.61, 43.79, 3.54, 9.62, 16.78, 4.43, 1.67, 35.43], "47. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Uric < 7": [75.18, 74.27, 72.03, 80.52, 75.27, 81.28, 59.39, 71.43, 100.0, 76.8], "48. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Urine Protein": [21.64, 24.24, 33.07, 45.48, 5.07, 9.12, 35.13, 12.03, 30.0, 13.4], "49. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Urine Protein \u0e1b\u0e01\u0e15\u0e34": [80.3, 80.82, 80.34, 93.85, 82.71, 88.34, 55.49, 94.74, 100.0, 77.33], "50. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 1-2": [72.5, 71.18, 71.95, 90.78, 76.95, 83.69, 48.74, 59.46, 100.0, 76.18], "51. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 3": [18.08, 19.17, 21.26, 8.74, 18.59, 13.16, 22.58, 27.03, 0.0, 15.02], "52. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 4": [3.67, 4.12, 3.81, 0.32, 4.09, 1.96, 9.41, 10.81, 0.0, 2.42], "53. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 5": [5.52, 5.21, 2.98, 0.16, 0.37, 1.18, 19.27, 2.7, 0.0, 6.38], "54. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19 Thai CV risk": [22.58, 26.6, 38.72, 5.0, 1.33, 75.65, 56.2, 77.22, 6.67, 9.83], "55. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk \u0e15\u0e48\u0e33": [49.28, 48.54, 51.75, 63.04, 34.29, 46.78, 45.9, 15.57, 100.0, 55.62], "56. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk <20%": [86.87, 86.52, 88.88, 94.57, 91.43, 87.99, 83.67, 71.31, 100.0, 89.89]};
+        const labels = ["\u0e20\u0e32\u0e1e\u0e23\u0e27\u0e21 (Total)", "\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14\u0e22\u0e01\u0e40\u0e27\u0e49\u0e19\u0e01\u0e25\u0e38\u0e48\u0e21\u0e2d\u0e37\u0e48\u0e19\u0e46", "1. \u0e2d\u0e32\u0e22\u0e38\u0e23\u0e01\u0e23\u0e23\u0e21", "2. \u0e2b\u0e49\u0e2d\u0e07\u0e40\u0e1a\u0e2d\u0e23\u0e4c 13", "3. \u0e23\u0e32\u0e0a\u0e27\u0e34\u0e16\u0e35\u0e19\u0e04\u0e23\u0e1e\u0e34\u0e07\u0e04\u0e4c", "4. \u0e40\u0e27\u0e0a\u0e28\u0e32\u0e2a\u0e15\u0e23\u0e4c\u0e04\u0e23\u0e2d\u0e1a\u0e04\u0e23\u0e31\u0e27", "5. \u0e04\u0e25\u0e34\u0e19\u0e34\u0e01\u0e42\u0e23\u0e04\u0e40\u0e23\u0e37\u0e49\u0e2d\u0e23\u0e31\u0e07", "6. \u0e2a\u0e39\u0e07\u0e2d\u0e32\u0e22\u0e38", "7. \u0e01\u0e38\u0e21\u0e32\u0e23", "8. \u0e01\u0e25\u0e38\u0e48\u0e21\u0e2d\u0e37\u0e48\u0e19\u0e46"];
+        
+        // Populate Select
+        const select = document.getElementById('metricSelect');
+        Object.keys(chartData).forEach(metric => {
+            let option = document.createElement('option');
+            option.value = metric;
+            option.text = metric;
+            select.appendChild(option);
+        });
+
+        // Register Datalabels plugin
+        Chart.register(ChartDataLabels);
+
+        let myChart;
+
+        function initChart() {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            const initialMetric = Object.keys(chartData)[0];
+            
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: initialMetric,
+                        data: chartData[initialMetric],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(41, 128, 185, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: initialMetric,
+                            font: {
+                                size: 20,
+                                family: "'Prompt', sans-serif"
+                            }
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: function(value, context) {
+                                // check if the metric implies percentage
+                                const metricName = document.getElementById('metricSelect').value;
+                                if(metricName.includes('ร้อยละ') || metricName.includes('อายุ')) {
+                                    return value + (metricName.includes('ร้อยละ') ? '%' : '');
+                                }
+                                return value.toLocaleString(); // Add commas to numbers
+                            },
+                            font: {
+                                weight: 'bold',
+                                size: 14,
+                                family: "'Prompt', sans-serif"
+                            },
+                            color: '#2c3e50'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'จำนวน / ร้อยละ',
+                                font: {
+                                    size: 14,
+                                    family: "'Prompt', sans-serif"
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 14,
+                                    family: "'Prompt', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            const selectedMetric = document.getElementById('metricSelect').value;
+            myChart.data.datasets[0].data = chartData[selectedMetric];
+            myChart.options.plugins.title.text = selectedMetric;
+            
+            // Adjust Y-axis title based on selection
+            if(selectedMetric.includes('ร้อยละ')) {
+                myChart.options.scales.y.title.text = 'ร้อยละ (%)';
+            } else if(selectedMetric.includes('อายุ')) {
+                 myChart.options.scales.y.title.text = 'ปี';
+            } else {
+                myChart.options.scales.y.title.text = 'จำนวน (คน)';
+            }
+
+            myChart.update();
+        }
+
+        // Initialize on load
+        window.onload = initChart;
+    </script>
+</body>
+</html>
