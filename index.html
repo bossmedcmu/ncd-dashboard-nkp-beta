@@ -3,210 +3,409 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สรุปข้อมูลการให้บริการ NCD โรงพยาบาลนครพิงค์</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>NCD Dashboard - โรงพยาบาลนครพิงค์</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
     <style>
+        :root {
+            --primary: #00796B;
+            --primary-light: #B2DFDB;
+            --secondary: #004D40;
+            --bg-color: #F4F7F6;
+            --card-bg: #FFFFFF;
+            --text-main: #333333;
+            --text-muted: #666666;
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: 'Prompt', sans-serif;
+        }
+
         body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f4f7f6;
             margin: 0;
-            padding: 0;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+
         header {
-            text-align: center;
-            padding: 30px 0;
-            background-color: #0056b3;
+            background-color: var(--primary);
             color: white;
-            border-radius: 0 0 15px 15px;
+            padding: 20px;
+            text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        h1 {
+
+        header h1 {
             margin: 0;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 600;
         }
-        .controls {
-            margin: 30px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-        select {
-            padding: 12px 20px;
-            font-size: 16px;
-            font-family: 'Sarabun', sans-serif;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 600px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            outline: none;
-            cursor: pointer;
-        }
-        select:focus {
-            border-color: #0056b3;
-        }
-        .chart-container {
-            background: white;
+
+        main {
+            flex: 1;
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .upload-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-top: 50px;
+            border: 2px dashed var(--primary-light);
+        }
+
+        .dashboard-container {
+            display: none; /* ซ่อนไว้จนกว่าจะอัปโหลดไฟล์ */
+            background: var(--card-bg);
+            padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            height: 600px;
-            position: relative;
         }
-        footer {
-            text-align: center;
-            padding: 20px;
-            margin-top: 40px;
-            color: #666;
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+            flex: 1;
+            min-width: 300px;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background-color: var(--secondary);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+        }
+
+        .breadcrumb {
             font-size: 14px;
-            border-top: 1px solid #ddd;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        footer {
+            background-color: var(--secondary);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            margin-top: auto;
+        }
+
+        .file-input-wrapper {
+            margin: 20px 0;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
     <header>
         <h1>สรุปข้อมูลการให้บริการ NCD โรงพยาบาลนครพิงค์ ปีงบประมาณ 2569</h1>
     </header>
 
-    <div class="controls">
-        <select id="indicatorSelect" onchange="updateChart()">
-            <option value="0">1. จำนวนคนไข้ทั้งหมด</option><option value="1">2. จำนวนคนที่เสียชีวิตไปแล้ว</option><option value="2">3. จำนวนคนที่ปีนี้ยังไม่มา F/U</option><option value="3">4. จำนวนคนที่มารับบริการในปีงบประมาณ</option><option value="4">5. ร้อยละคนที่มารับบริการในปีงบประมาณ</option><option value="5">6. อายุเฉลี่ย ณ 1 ตุลาคม 2025</option><option value="6">7. ร้อยละเพศชาย</option><option value="7">8. ร้อยละคนไทย</option><option value="8">9. ร้อยละบัตรทอง</option><option value="9">10. ร้อยละ ปกส.</option><option value="10">11. ร้อยละเบิกได้</option><option value="11">12. จำนวนเบาหวาน</option><option value="12">13. ร้อยละเบาหวาน</option><option value="13">14. จำนวนความดัน</option><option value="14">15. ร้อยละความดัน</option><option value="15">16. จำนวนเบาหวานและความดัน</option><option value="16">17. ร้อยละเบาหวานและความดัน</option><option value="17">18. ร้อยละคนที่มีน้ำหนัก</option><option value="18">19. ร้อยละคนที่มีส่วนสูง</option><option value="19">20. ร้อยละคนที่มี BMI</option><option value="20">21. ร้อยละคนที่ BMI ปกติ</option><option value="21">22. ร้อยละการตรวจ HbA1c</option><option value="22">23. ร้อยละ HbA1c < 7</option><option value="23">24. ร้อยละการตรวจ LDL</option><option value="24">25. ร้อยละ LDL < 100</option><option value="25">26. ร้อยละการวัดความดัน</option><option value="26">27. ร้อยละคุมความดันได้ดี</option><option value="27">28. ร้อยละการตรวจ MicroAlb</option><option value="28">29. ร้อยละ MicroAlb ปกติ</option><option value="29">30. ร้อยละ DM ตรวจตา</option><option value="30">31. ร้อยละ DM ผลตรวจตาปกติ</option><option value="31">32. ร้อยละ HT ที่เป็น IHD</option><option value="32">33. ร้อยละ HT ที่เป็น CVA</option><option value="33">34. ร้อยละ DM ที่ไตเสื่อม</option><option value="34">35. ร้อยละ HT ที่ไตเสื่อม</option><option value="35">36. ร้อยละ DM ที่ตัดเท้า</option><option value="36">37. ร้อยละการใช้ ASA</option><option value="37">38. ร้อยละการใช้ ACEI</option><option value="38">39. ร้อยละการใช้ ARB</option><option value="39">40. ร้อยละการใช้ Statin</option><option value="40">41. ร้อยละ LDL มากกว่า 100 แต่ไม่ได้ใช้ Statin</option><option value="41">42. ร้อยละ DM ที่ตรวจฟัน</option><option value="42">43. ร้อยละ DM ตรวจเท้า</option><option value="43">44. ร้อยละ DM ผลตรวจเท้าเสี่ยงต่ำ</option><option value="44">45. ร้อยละ DM สูบบุหรี่</option><option value="45">46. ร้อยละการตรวจ Chol</option><option value="46">47. ร้อยละ Chol < 200</option><option value="47">48. ร้อยละการตรวจ TG</option><option value="48">49. ร้อยละ TG < 150</option><option value="49">50. ร้อยละการตรวจ HDL</option><option value="50">51. ร้อยละ HDL ปกติ</option><option value="51">52. ร้อยละการตรวจ Cr</option><option value="52">53. ร้อยละ Cr < 1</option><option value="53">54. ร้อยละการตรวจ Uric</option><option value="54">55. ร้อยละ Uric < 7</option><option value="55">56. ร้อยละการตรวจ Urine Protein</option><option value="56">57. ร้อยละ Urine Protein ปกติ</option><option value="57">58. ร้อยละ eGFR Gr >60</option><option value="58">59. ร้อยละ eGFR Gr 3</option><option value="59">60. ร้อยละ eGFR Gr 4</option><option value="60">61. ร้อยละ eGFR Gr 5</option><option value="61">62. ร้อยละ Thai CV risk</option><option value="62">63. ร้อยละ Thai CV risk ต่ำ</option><option value="63">64. ร้อยละ Thai CV risk <20%</option>
-        </select>
-    </div>
+    <main>
+        <div class="upload-section" id="uploadSection">
+            <h2>อัปโหลดไฟล์ข้อมูลเพื่อเริ่มต้น</h2>
+            <p style="color: var(--text-muted);">กรุณาเลือกไฟล์ <b>patient_full_71_kpis_v3.csv</b> ที่ดาวน์โหลดมา</p>
+            <div class="file-input-wrapper">
+                <input type="file" id="csvFileInput" accept=".csv" style="font-size: 16px;">
+            </div>
+        </div>
 
-    <div class="chart-container">
-        <canvas id="myChart"></canvas>
-    </div>
+        <div class="dashboard-container" id="dashboardSection">
+            <div class="controls">
+                <select id="kpiSelector"></select>
+                <button id="backBtn" style="display: none;">
+                    &#8592; ย้อนกลับ
+                </button>
+            </div>
+            <div class="breadcrumb" id="breadcrumbText">ระดับ: ภาพรวมทั้งหมด</div>
+            <div class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+    </main>
 
     <footer>
         จัดทำโดย คณะกรรมการ NCD โรงพยาบาลนครพิงค์
     </footer>
-</div>
 
-<script>
-    const chartData = {"1. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e44\u0e02\u0e49\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14": {"values": [38184.0, 21757.0, 2409.0, 2537.0, 10338.0, 2609.0, 3629.0, 57.0, 178.0, 16427.0], "labels": ["38,184", "21,757", "2,409", "2,537", "10,338", "2,609", "3,629", "57", "178", "16,427"], "is_percent": false}, "2. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e40\u0e2a\u0e35\u0e22\u0e0a\u0e35\u0e27\u0e34\u0e15\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27": {"values": [467.0, 181.0, 20.0, 45.0, 107.0, 5.0, 3.0, 0.0, 1.0, 286.0], "labels": ["467", "181", "20", "45", "107", "5", "3", "0", "1", "286"], "is_percent": false}, "3. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e1b\u0e35\u0e19\u0e35\u0e49\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e32 F/U": {"values": [11577.0, 4953.0, 317.0, 465.0, 3092.0, 286.0, 765.0, 10.0, 18.0, 6624.0], "labels": ["11,577", "4,953", "317", "465", "3,092", "286", "765", "10", "18", "6,624"], "is_percent": false}, "4. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e32\u0e23\u0e31\u0e1a\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23\u0e43\u0e19\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13": {"values": [26140.0, 16623.0, 2072.0, 2027.0, 7139.0, 2318.0, 2861.0, 47.0, 159.0, 9517.0], "labels": ["26,140", "16,623", "2,072", "2,027", "7,139", "2,318", "2,861", "47", "159", "9,517"], "is_percent": false}, "5. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e32\u0e23\u0e31\u0e1a\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23\u0e43\u0e19\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13": {"values": [69.31, 77.04, 86.73, 81.34, 69.78, 89.02, 78.9, 82.46, 89.83, 58.96], "labels": ["69.31%", "77.04%", "86.73%", "81.34%", "69.78%", "89.02%", "78.90%", "82.46%", "89.83%", "58.96%"], "is_percent": true}, "6. \u0e2d\u0e32\u0e22\u0e38\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22 \u0e13 1 \u0e15\u0e38\u0e25\u0e32\u0e04\u0e21 2025": {"values": [63.98, 64.65, 64.67, 62.32, 66.14, 68.3, 59.63, 16.19, 78.46, 62.81], "labels": ["63.98", "64.65", "64.67", "62.32", "66.14", "68.30", "59.63", "16.19", "78.46", "62.81"], "is_percent": false}, "7. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1e\u0e28\u0e0a\u0e32\u0e22": {"values": [42.15, 42.12, 35.14, 46.72, 45.87, 39.82, 36.88, 29.79, 37.11, 42.21], "labels": ["42.15%", "42.12%", "35.14%", "46.72%", "45.87%", "39.82%", "36.88%", "29.79%", "37.11%", "42.21%"], "is_percent": true}, "8. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e44\u0e17\u0e22": {"values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "labels": ["0.00%", "0.00%", "0.00%", "0.00%", "0.00%", "0.00%", "0.00%", "0.00%", "0.00%", "0.00%"], "is_percent": true}, "9. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e1a\u0e31\u0e15\u0e23\u0e17\u0e2d\u0e07": {"values": [63.96, 58.8, 84.11, 66.67, 52.01, 62.08, 47.61, 82.98, 80.5, 73.0], "labels": ["63.96%", "58.80%", "84.11%", "66.67%", "52.01%", "62.08%", "47.61%", "82.98%", "80.50%", "73.00%"], "is_percent": true}, "10. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 \u0e1b\u0e01\u0e2a.": {"values": [6.33, 6.12, 2.85, 4.2, 5.76, 4.66, 12.2, 8.51, 0.63, 6.69], "labels": ["6.33%", "6.12%", "2.85%", "4.20%", "5.76%", "4.66%", "12.20%", "8.51%", "0.63%", "6.69%"], "is_percent": true}, "11. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e34\u0e01\u0e44\u0e14\u0e49": {"values": [29.71, 35.08, 13.04, 29.14, 42.23, 33.26, 40.2, 8.51, 18.87, 20.32], "labels": ["29.71%", "35.08%", "13.04%", "29.14%", "42.23%", "33.26%", "40.20%", "8.51%", "18.87%", "20.32%"], "is_percent": true}, "12. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19": {"values": [11763.0, 7944.0, 804.0, 1496.0, 3644.0, 855.0, 1023.0, 45.0, 77.0, 3819.0], "labels": ["11,763", "7,944", "804", "1,496", "3,644", "855", "1,023", "45", "77", "3,819"], "is_percent": false}, "13. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19": {"values": [45.0, 47.79, 38.8, 73.8, 51.04, 36.89, 35.76, 95.74, 48.43, 40.13], "labels": ["45.00%", "47.79%", "38.80%", "73.80%", "51.04%", "36.89%", "35.76%", "95.74%", "48.43%", "40.13%"], "is_percent": true}, "14. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": {"values": [23423.0, 15372.0, 2003.0, 1659.0, 6585.0, 2225.0, 2735.0, 9.0, 156.0, 8051.0], "labels": ["23,423", "15,372", "2,003", "1,659", "6,585", "2,225", "2,735", "9", "156", "8,051"], "is_percent": false}, "15. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": {"values": [89.61, 92.47, 96.67, 81.85, 92.24, 95.99, 95.6, 19.15, 98.11, 84.6], "labels": ["89.61%", "92.47%", "96.67%", "81.85%", "92.24%", "95.99%", "95.60%", "19.15%", "98.11%", "84.60%"], "is_percent": true}, "16. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": {"values": [9046.0, 6693.0, 735.0, 1128.0, 3090.0, 762.0, 897.0, 7.0, 74.0, 2353.0], "labels": ["9,046", "6,693", "735", "1,128", "3,090", "762", "897", "7", "74", "2,353"], "is_percent": false}, "17. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": {"values": [34.61, 40.26, 35.47, 55.65, 43.28, 32.87, 31.35, 14.89, 46.54, 24.72], "labels": ["34.61%", "40.26%", "35.47%", "55.65%", "43.28%", "32.87%", "31.35%", "14.89%", "46.54%", "24.72%"], "is_percent": true}, "18. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35\u0e19\u0e49\u0e33\u0e2b\u0e19\u0e31\u0e01": {"values": [79.03, 97.09, 93.92, 98.77, 97.0, 96.89, 98.57, 97.87, 96.86, 47.49], "labels": ["79.03%", "97.09%", "93.92%", "98.77%", "97.00%", "96.89%", "98.57%", "97.87%", "96.86%", "47.49%"], "is_percent": true}, "19. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35\u0e2a\u0e48\u0e27\u0e19\u0e2a\u0e39\u0e07": {"values": [63.15, 80.26, 89.53, 89.49, 83.2, 76.23, 62.64, 42.55, 96.23, 33.28], "labels": ["63.15%", "80.26%", "89.53%", "89.49%", "83.20%", "76.23%", "62.64%", "42.55%", "96.23%", "33.28%"], "is_percent": true}, "20. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35 BMI": {"values": [62.61, 79.87, 89.38, 89.15, 82.78, 75.54, 62.39, 40.43, 95.6, 32.48], "labels": ["62.61%", "79.87%", "89.38%", "89.15%", "82.78%", "75.54%", "62.39%", "40.43%", "95.60%", "32.48%"], "is_percent": true}, "21. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48 BMI \u0e1b\u0e01\u0e15\u0e34": {"values": [26.43, 25.26, 23.65, 23.52, 25.14, 26.67, 25.49, 57.89, 46.71, 31.45], "labels": ["26.43%", "25.26%", "23.65%", "23.52%", "25.14%", "26.67%", "25.49%", "57.89%", "46.71%", "31.45%"], "is_percent": true}, "22. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HbA1c": {"values": [28.18, 37.38, 5.69, 56.29, 49.35, 2.76, 46.24, 80.85, 4.4, 12.09], "labels": ["28.18%", "37.38%", "5.69%", "56.29%", "49.35%", "2.76%", "46.24%", "80.85%", "4.40%", "12.09%"], "is_percent": true}, "23. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HbA1c < 7": {"values": [56.78, 56.94, 55.93, 35.67, 54.87, 60.94, 81.86, 21.05, 28.57, 55.95], "labels": ["56.78%", "56.94%", "55.93%", "35.67%", "54.87%", "60.94%", "81.86%", "21.05%", "28.57%", "55.95%"], "is_percent": true}, "24. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 LDL": {"values": [37.38, 45.24, 9.99, 48.64, 67.01, 3.54, 49.88, 61.7, 3.77, 23.63], "labels": ["37.38%", "45.24%", "9.99%", "48.64%", "67.01%", "3.54%", "49.88%", "61.70%", "3.77%", "23.63%"], "is_percent": true}, "25. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL < 100": {"values": [54.97, 56.64, 40.1, 61.46, 64.32, 42.68, 31.11, 34.48, 83.33, 49.4], "labels": ["54.97%", "56.64%", "40.10%", "61.46%", "64.32%", "42.68%", "31.11%", "34.48%", "83.33%", "49.40%"], "is_percent": true}, "26. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e27\u0e31\u0e14\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19": {"values": [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0], "labels": ["100.00%", "100.00%", "100.00%", "100.00%", "100.00%", "100.00%", "100.00%", "100.00%", "100.00%", "100.00%"], "is_percent": true}, "27. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e38\u0e21\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19\u0e44\u0e14\u0e49\u0e14\u0e35": {"values": [14.95, 20.96, 38.8, 36.46, 25.12, 0.52, 2.38, 4.26, 41.51, 4.44], "labels": ["14.95%", "20.96%", "38.80%", "36.46%", "25.12%", "0.52%", "2.38%", "4.26%", "41.51%", "4.44%"], "is_percent": true}, "28. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 MicroAlb": {"values": [12.11, 17.55, 2.12, 21.31, 16.67, 0.99, 42.19, 38.3, 2.52, 2.61], "labels": ["12.11%", "17.55%", "2.12%", "21.31%", "16.67%", "0.99%", "42.19%", "38.30%", "2.52%", "2.61%"], "is_percent": true}, "29. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 MicroAlb \u0e1b\u0e01\u0e15\u0e34": {"values": [28.17, 28.68, 20.45, 9.49, 20.76, 8.7, 43.99, 38.89, 0.0, 22.18], "labels": ["28.17%", "28.68%", "20.45%", "9.49%", "20.76%", "8.70%", "43.99%", "38.89%", "0.00%", "22.18%"], "is_percent": true}, "30. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e15\u0e23\u0e27\u0e08\u0e15\u0e32": {"values": [16.65, 18.15, 28.73, 19.72, 14.46, 6.9, 30.4, 11.11, 18.18, 13.51], "labels": ["16.65%", "18.15%", "28.73%", "19.72%", "14.46%", "6.90%", "30.40%", "11.11%", "18.18%", "13.51%"], "is_percent": true}, "31. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e15\u0e32\u0e1b\u0e01\u0e15\u0e34": {"values": [59.96, 72.54, 85.71, 57.29, 63.57, 62.71, 92.93, 100.0, 92.86, 24.81], "labels": ["59.96%", "72.54%", "85.71%", "57.29%", "63.57%", "62.71%", "92.93%", "100.00%", "92.86%", "24.81%"], "is_percent": true}, "32. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 IHD": {"values": [6.13, 6.64, 1.4, 17.96, 9.61, 1.75, 0.66, 0.0, 3.21, 5.17], "labels": ["6.13%", "6.64%", "1.40%", "17.96%", "9.61%", "1.75%", "0.66%", "0.00%", "3.21%", "5.17%"], "is_percent": true}, "33. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 CVA": {"values": [4.29, 4.57, 2.25, 2.89, 7.37, 1.44, 2.82, 0.0, 9.62, 3.76], "labels": ["4.29%", "4.57%", "2.25%", "2.89%", "7.37%", "1.44%", "2.82%", "0.00%", "9.62%", "3.76%"], "is_percent": true}, "34. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21": {"values": [19.99, 23.48, 16.79, 39.44, 23.9, 19.18, 6.55, 17.78, 38.96, 12.73], "labels": ["19.99%", "23.48%", "16.79%", "39.44%", "23.90%", "19.18%", "6.55%", "17.78%", "38.96%", "12.73%"], "is_percent": true}, "35. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21": {"values": [15.12, 17.45, 12.63, 45.57, 18.3, 11.46, 5.81, 0.0, 34.62, 10.68], "labels": ["15.12%", "17.45%", "12.63%", "45.57%", "18.30%", "11.46%", "5.81%", "0.00%", "34.62%", "10.68%"], "is_percent": true}, "36. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e31\u0e14\u0e40\u0e17\u0e49\u0e32": {"values": [0.24, 0.21, 0.12, 0.2, 0.33, 0.12, 0.0, 0.0, 0.0, 0.29], "labels": ["0.24%", "0.21%", "0.12%", "0.20%", "0.33%", "0.12%", "0.00%", "0.00%", "0.00%", "0.29%"], "is_percent": true}, "37. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ASA": {"values": [19.93, 24.17, 15.88, 36.56, 30.38, 19.97, 8.91, 4.26, 37.11, 12.51], "labels": ["19.93%", "24.17%", "15.88%", "36.56%", "30.38%", "19.97%", "8.91%", "4.26%", "37.11%", "12.51%"], "is_percent": true}, "38. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ACEI": {"values": [19.69, 23.96, 27.51, 19.29, 19.73, 25.48, 32.94, 55.56, 25.64, 11.55], "labels": ["19.69%", "23.96%", "27.51%", "19.29%", "19.73%", "25.48%", "32.94%", "55.56%", "25.64%", "11.55%"], "is_percent": true}, "39. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ARB": {"values": [31.57, 40.52, 40.04, 37.01, 40.44, 38.83, 44.5, 11.11, 42.95, 14.5], "labels": ["31.57%", "40.52%", "40.04%", "37.01%", "40.44%", "38.83%", "44.50%", "11.11%", "42.95%", "14.50%"], "is_percent": true}, "40. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 Statin": {"values": [34.63, 45.92, 56.13, 38.14, 35.78, 58.2, 58.51, 44.68, 62.26, 14.91], "labels": ["34.63%", "45.92%", "56.13%", "38.14%", "35.78%", "58.20%", "58.51%", "44.68%", "62.26%", "14.91%"], "is_percent": true}, "41. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL \u0e21\u0e32\u0e01\u0e01\u0e27\u0e48\u0e32 100 \u0e41\u0e15\u0e48\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e43\u0e0a\u0e49 Statin": {"values": [62.99, 54.37, 41.13, 62.37, 62.92, 57.45, 38.56, 26.32, 0.0, 87.7], "labels": ["62.99%", "54.37%", "41.13%", "62.37%", "62.92%", "57.45%", "38.56%", "26.32%", "0.00%", "87.70%"], "is_percent": true}, "42. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e23\u0e27\u0e08\u0e1f\u0e31\u0e19": {"values": [5.06, 6.38, 7.59, 8.02, 4.91, 3.39, 5.77, 6.67, 72.73, 2.3], "labels": ["5.06%", "6.38%", "7.59%", "8.02%", "4.91%", "3.39%", "5.77%", "6.67%", "72.73%", "2.30%"], "is_percent": true}, "43. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32": {"values": [5.98, 7.48, 35.57, 13.17, 2.09, 0.35, 0.49, 8.89, 29.87, 2.85], "labels": ["5.98%", "7.48%", "35.57%", "13.17%", "2.09%", "0.35%", "0.49%", "8.89%", "29.87%", "2.85%"], "is_percent": true}, "44. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32\u0e40\u0e2a\u0e35\u0e48\u0e22\u0e07\u0e15\u0e48\u0e33": {"values": [96.44, 96.63, 99.65, 92.39, 94.74, 100.0, 100.0, 100.0, 100.0, 95.41], "labels": ["96.44%", "96.63%", "99.65%", "92.39%", "94.74%", "100.00%", "100.00%", "100.00%", "100.00%", "95.41%"], "is_percent": true}, "45. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e2a\u0e39\u0e1a\u0e1a\u0e38\u0e2b\u0e23\u0e35\u0e48": {"values": [0.07, 0.08, 0.25, 0.07, 0.08, 0.0, 0.0, 0.0, 0.0, 0.05], "labels": ["0.07%", "0.08%", "0.25%", "0.07%", "0.08%", "0.00%", "0.00%", "0.00%", "0.00%", "0.05%"], "is_percent": true}, "46. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Chol": {"values": [31.93, 37.56, 10.09, 38.28, 53.59, 3.49, 46.03, 61.7, 3.14, 22.1], "labels": ["31.93%", "37.56%", "10.09%", "38.28%", "53.59%", "3.49%", "46.03%", "61.70%", "3.14%", "22.10%"], "is_percent": true}, "47. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Chol < 200": {"values": [79.87, 79.91, 73.21, 81.7, 84.58, 69.14, 67.12, 72.41, 100.0, 79.74], "labels": ["79.87%", "79.91%", "73.21%", "81.70%", "84.58%", "69.14%", "67.12%", "72.41%", "100.00%", "79.74%"], "is_percent": true}, "48. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 TG": {"values": [31.81, 37.33, 9.99, 35.77, 53.82, 3.49, 46.03, 61.7, 3.14, 22.15], "labels": ["31.81%", "37.33%", "9.99%", "35.77%", "53.82%", "3.49%", "46.03%", "61.70%", "3.14%", "22.15%"], "is_percent": true}, "49. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 TG < 150": {"values": [75.62, 74.69, 76.81, 73.66, 75.38, 82.72, 72.06, 89.66, 80.0, 78.37], "labels": ["75.62%", "74.69%", "76.81%", "73.66%", "75.38%", "82.72%", "72.06%", "89.66%", "80.00%", "78.37%"], "is_percent": true}, "50. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HDL": {"values": [31.72, 37.22, 9.8, 35.22, 53.8, 3.45, 45.96, 61.7, 3.14, 22.12], "labels": ["31.72%", "37.22%", "9.80%", "35.22%", "53.80%", "3.45%", "45.96%", "61.70%", "3.14%", "22.12%"], "is_percent": true}, "51. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HDL \u0e1b\u0e01\u0e15\u0e34": {"values": [66.84, 66.12, 70.94, 55.04, 65.69, 73.75, 72.17, 65.52, 80.0, 68.93], "labels": ["66.84%", "66.12%", "70.94%", "55.04%", "65.69%", "73.75%", "72.17%", "65.52%", "80.00%", "68.93%"], "is_percent": true}, "52. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Cr": {"values": [46.56, 57.1, 16.22, 86.33, 80.4, 8.24, 49.49, 53.19, 20.75, 28.17], "labels": ["46.56%", "57.10%", "16.22%", "86.33%", "80.40%", "8.24%", "49.49%", "53.19%", "20.75%", "28.17%"], "is_percent": true}, "53. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Cr < 1": {"values": [60.75, 59.49, 77.08, 39.2, 59.22, 68.59, 79.8, 100.0, 48.48, 65.2], "labels": ["60.75%", "59.49%", "77.08%", "39.20%", "59.22%", "68.59%", "79.80%", "100.00%", "48.48%", "65.20%"], "is_percent": true}, "54. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Uric": {"values": [21.74, 23.91, 7.48, 17.61, 30.02, 2.2, 44.18, 2.13, 2.52, 17.95], "labels": ["21.74%", "23.91%", "7.48%", "17.61%", "30.02%", "2.20%", "44.18%", "2.13%", "2.52%", "17.95%"], "is_percent": true}, "55. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Uric < 7": {"values": [75.15, 74.79, 86.45, 58.82, 72.75, 70.59, 81.57, 100.0, 50.0, 76.0], "labels": ["75.15%", "74.79%", "86.45%", "58.82%", "72.75%", "70.59%", "81.57%", "100.00%", "50.00%", "76.00%"], "is_percent": true}, "56. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Urine Protein": {"values": [19.95, 27.84, 6.23, 36.06, 33.03, 4.06, 45.02, 25.53, 10.06, 6.18], "labels": ["19.95%", "27.84%", "6.23%", "36.06%", "33.03%", "4.06%", "45.02%", "25.53%", "10.06%", "6.18%"], "is_percent": true}, "57. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Urine Protein \u0e1b\u0e01\u0e15\u0e34": {"values": [80.69, 81.05, 88.37, 55.95, 80.79, 81.91, 94.72, 100.0, 87.5, 77.89], "labels": ["80.69%", "81.05%", "88.37%", "55.95%", "80.79%", "81.91%", "94.72%", "100.00%", "87.50%", "77.89%"], "is_percent": true}, "58. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr >60": {"values": [70.93, 70.16, 84.23, 46.8, 71.18, 76.44, 90.4, 100.0, 60.61, 73.67], "labels": ["70.93%", "70.16%", "84.23%", "46.80%", "71.18%", "76.44%", "90.40%", "100.00%", "60.61%", "73.67%"], "is_percent": true}, "59. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 3": {"values": [19.01, 20.06, 12.8, 23.54, 22.16, 18.85, 9.32, 0.0, 27.27, 15.29], "labels": ["19.01%", "20.06%", "12.80%", "23.54%", "22.16%", "18.85%", "9.32%", "0.00%", "27.27%", "15.29%"], "is_percent": true}, "60. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 4": {"values": [4.07, 4.47, 1.79, 10.11, 3.95, 4.19, 0.21, 0.0, 9.09, 2.69], "labels": ["4.07%", "4.47%", "1.79%", "10.11%", "3.95%", "4.19%", "0.21%", "0.00%", "9.09%", "2.69%"], "is_percent": true}, "61. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 5": {"values": [5.98, 5.31, 1.19, 19.54, 2.7, 0.52, 0.07, 0.0, 3.03, 8.36], "labels": ["5.98%", "5.31%", "1.19%", "19.54%", "2.70%", "0.52%", "0.07%", "0.00%", "3.03%", "8.36%"], "is_percent": true}, "62. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk": {"values": [26.38, 37.71, 81.71, 60.73, 43.05, 1.04, 4.19, 4.26, 79.25, 6.59], "labels": ["26.38%", "37.71%", "81.71%", "60.73%", "43.05%", "1.04%", "4.19%", "4.26%", "79.25%", "6.59%"], "is_percent": true}, "63. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk \u0e15\u0e48\u0e33": {"values": [47.01, 46.47, 45.6, 44.11, 48.55, 37.5, 60.83, 100.0, 17.46, 52.47], "labels": ["47.01%", "46.47%", "45.60%", "44.11%", "48.55%", "37.50%", "60.83%", "100.00%", "17.46%", "52.47%"], "is_percent": true}, "64. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk <20%": {"values": [86.88, 86.63, 87.77, 82.7, 87.8, 91.67, 95.0, 100.0, 72.22, 89.31], "labels": ["86.88%", "86.63%", "87.77%", "82.70%", "87.80%", "91.67%", "95.00%", "100.00%", "72.22%", "89.31%"], "is_percent": true}};
-    const groups = ["\u0e23\u0e27\u0e21\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14", "\u0e23\u0e27\u0e21 (\u0e22\u0e01\u0e40\u0e27\u0e49\u0e19\u0e01\u0e25\u0e38\u0e48\u0e21\u0e2d\u0e37\u0e48\u0e19\u0e46)", "\u0e40\u0e27\u0e0a\u0e28\u0e32\u0e2a\u0e15\u0e23\u0e4c\u0e04\u0e23\u0e2d\u0e1a\u0e04\u0e23\u0e31\u0e27", "\u0e04\u0e25\u0e34\u0e19\u0e34\u0e01\u0e42\u0e23\u0e04\u0e40\u0e23\u0e37\u0e49\u0e2d\u0e23\u0e31\u0e07", "\u0e2d\u0e32\u0e22\u0e38\u0e23\u0e01\u0e23\u0e23\u0e21", "\u0e23\u0e32\u0e0a\u0e27\u0e34\u0e16\u0e35\u0e19\u0e04\u0e23\u0e1e\u0e34\u0e07\u0e04\u0e4c", "\u0e2b\u0e49\u0e2d\u0e07\u0e40\u0e1a\u0e2d\u0e23\u0e4c_13", "\u0e01\u0e38\u0e21\u0e32\u0e23", "\u0e2a\u0e39\u0e07\u0e2d\u0e32\u0e22\u0e38", "\u0e01\u0e25\u0e38\u0e48\u0e21\u0e2d\u0e37\u0e48\u0e19\u0e46"];
-    const indicatorsList = ["1. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e44\u0e02\u0e49\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14", "2. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e40\u0e2a\u0e35\u0e22\u0e0a\u0e35\u0e27\u0e34\u0e15\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27", "3. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e1b\u0e35\u0e19\u0e35\u0e49\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e32 F/U", "4. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e32\u0e23\u0e31\u0e1a\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23\u0e43\u0e19\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13", "5. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e32\u0e23\u0e31\u0e1a\u0e1a\u0e23\u0e34\u0e01\u0e32\u0e23\u0e43\u0e19\u0e1b\u0e35\u0e07\u0e1a\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13", "6. \u0e2d\u0e32\u0e22\u0e38\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22 \u0e13 1 \u0e15\u0e38\u0e25\u0e32\u0e04\u0e21 2025", "7. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1e\u0e28\u0e0a\u0e32\u0e22", "8. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e44\u0e17\u0e22", "9. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e1a\u0e31\u0e15\u0e23\u0e17\u0e2d\u0e07", "10. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 \u0e1b\u0e01\u0e2a.", "11. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e34\u0e01\u0e44\u0e14\u0e49", "12. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19", "13. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19", "14. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19", "15. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19", "16. \u0e08\u0e33\u0e19\u0e27\u0e19\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19", "17. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e40\u0e1a\u0e32\u0e2b\u0e27\u0e32\u0e19\u0e41\u0e25\u0e30\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19", "18. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35\u0e19\u0e49\u0e33\u0e2b\u0e19\u0e31\u0e01", "19. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35\u0e2a\u0e48\u0e27\u0e19\u0e2a\u0e39\u0e07", "20. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48\u0e21\u0e35 BMI", "21. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e19\u0e17\u0e35\u0e48 BMI \u0e1b\u0e01\u0e15\u0e34", "22. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HbA1c", "23. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HbA1c < 7", "24. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 LDL", "25. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL < 100", "26. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e27\u0e31\u0e14\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19", "27. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e04\u0e38\u0e21\u0e04\u0e27\u0e32\u0e21\u0e14\u0e31\u0e19\u0e44\u0e14\u0e49\u0e14\u0e35", "28. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 MicroAlb", "29. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 MicroAlb \u0e1b\u0e01\u0e15\u0e34", "30. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e15\u0e23\u0e27\u0e08\u0e15\u0e32", "31. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e15\u0e32\u0e1b\u0e01\u0e15\u0e34", "32. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 IHD", "33. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e40\u0e1b\u0e47\u0e19 CVA", "34. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21", "35. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HT \u0e17\u0e35\u0e48\u0e44\u0e15\u0e40\u0e2a\u0e37\u0e48\u0e2d\u0e21", "36. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e31\u0e14\u0e40\u0e17\u0e49\u0e32", "37. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ASA", "38. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ACEI", "39. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 ARB", "40. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e43\u0e0a\u0e49 Statin", "41. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 LDL \u0e21\u0e32\u0e01\u0e01\u0e27\u0e48\u0e32 100 \u0e41\u0e15\u0e48\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e43\u0e0a\u0e49 Statin", "42. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e17\u0e35\u0e48\u0e15\u0e23\u0e27\u0e08\u0e1f\u0e31\u0e19", "43. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32", "44. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e1c\u0e25\u0e15\u0e23\u0e27\u0e08\u0e40\u0e17\u0e49\u0e32\u0e40\u0e2a\u0e35\u0e48\u0e22\u0e07\u0e15\u0e48\u0e33", "45. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 DM \u0e2a\u0e39\u0e1a\u0e1a\u0e38\u0e2b\u0e23\u0e35\u0e48", "46. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Chol", "47. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Chol < 200", "48. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 TG", "49. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 TG < 150", "50. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 HDL", "51. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 HDL \u0e1b\u0e01\u0e15\u0e34", "52. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Cr", "53. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Cr < 1", "54. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Uric", "55. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Uric < 7", "56. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30\u0e01\u0e32\u0e23\u0e15\u0e23\u0e27\u0e08 Urine Protein", "57. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Urine Protein \u0e1b\u0e01\u0e15\u0e34", "58. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr >60", "59. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 3", "60. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 4", "61. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 eGFR Gr 5", "62. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk", "63. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk \u0e15\u0e48\u0e33", "64. \u0e23\u0e49\u0e2d\u0e22\u0e25\u0e30 Thai CV risk <20%"];
-    
-    // Colors for the bars
-    const backgroundColors = [
-        'rgba(54, 162, 235, 0.7)',  // รวมทั้งหมด
-        'rgba(255, 99, 132, 0.7)',  // รวม (ยกเว้นกลุ่มอื่นๆ)
-        'rgba(75, 192, 192, 0.7)',  // เวชศาสตร์ครอบครัว
-        'rgba(255, 206, 86, 0.7)',  // คลินิกโรคเรื้อรัง
-        'rgba(153, 102, 255, 0.7)', // อายุรกรรม
-        'rgba(255, 159, 64, 0.7)',  // ราชวิถีนครพิงค์
-        'rgba(199, 199, 199, 0.7)', // ห้องเบอร์_13
-        'rgba(83, 211, 151, 0.7)',  // กุมาร
-        'rgba(238, 130, 238, 0.7)', // สูงอายุ
-        'rgba(100, 149, 237, 0.7)'  // กลุ่มอื่นๆ
-    ];
-    
-    const borderColors = backgroundColors.map(color => color.replace('0.7', '1'));
-
-    // Register DataLabels plugin
-    Chart.register(ChartDataLabels);
-
-    let myChart;
-
-    function initChart() {
-        const ctx = document.getElementById('myChart').getContext('2d');
+    <script>
+        let rawData = [];
+        let kpiList = [];
+        let currentKpi = "";
+        let chartInstance = null;
         
-        myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: groups,
-                datasets: [{
-                    label: '',
-                    data: [],
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
+        // Navigation State
+        let navStack = []; // เก็บประวัติการกดเพื่อย้อนกลับ
+
+        // Elements
+        const csvFileInput = document.getElementById('csvFileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const dashboardSection = document.getElementById('dashboardSection');
+        const kpiSelector = document.getElementById('kpiSelector');
+        const backBtn = document.getElementById('backBtn');
+        const breadcrumbText = document.getElementById('breadcrumbText');
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        // สีสำหรับกราฟแท่ง
+        const colors = [
+            'rgba(0, 121, 107, 0.8)', 'rgba(0, 150, 136, 0.8)', 'rgba(38, 166, 154, 0.8)', 
+            'rgba(77, 182, 172, 0.8)', 'rgba(128, 203, 196, 0.8)', 'rgba(3, 169, 244, 0.8)',
+            'rgba(2, 136, 209, 0.8)', 'rgba(255, 152, 0, 0.8)', 'rgba(245, 124, 0, 0.8)'
+        ];
+
+        // 1. อ่านไฟล์ CSV
+        csvFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    rawData = results.data;
+                    initializeDashboard();
+                }
+            });
+        });
+
+        // 2. ตั้งค่าเริ่มต้นให้ Dashboard
+        function initializeDashboard() {
+            // ดึงชื่อ KPI (คอลัมน์ที่ 4 เป็นต้นไป)
+            const columns = Object.keys(rawData[0]);
+            kpiList = columns.slice(3);
+            
+            // นำ KPI ใส่ใน Dropdown
+            kpiSelector.innerHTML = '';
+            kpiList.forEach(kpi => {
+                let option = document.createElement('option');
+                option.value = kpi;
+                option.textContent = kpi;
+                kpiSelector.appendChild(option);
+            });
+
+            currentKpi = kpiList[0];
+            uploadSection.style.display = 'none';
+            dashboardSection.style.display = 'block';
+
+            // โหลดกราฟระดับที่ 1 (ภาพใหญ่)
+            loadLevel1();
+        }
+
+        // เมื่อเปลี่ยน KPI
+        kpiSelector.addEventListener('change', function(e) {
+            currentKpi = e.target.value;
+            // รีเซ็ตการเจาะลึก กลับไปหน้าแรกสุด
+            navStack = [];
+            loadLevel1();
+        });
+
+        // ปุ่มย้อนกลับ
+        backBtn.addEventListener('click', function() {
+            navStack.pop(); // เอาสถานะปัจจุบันออก
+            if (navStack.length === 0) {
+                loadLevel1();
+            } else {
+                const previousState = navStack[navStack.length - 1];
+                if (previousState.level === 2) {
+                    loadLevel2(previousState.macroGroup);
+                }
+                // (ถ้ามีลึกกว่านี้ก็เพิ่มเงื่อนไข)
+            }
+        });
+
+        // แปลงค่าจาก string ("75.2%") ให้เป็นตัวเลขสำหรับวาดกราฟ
+        function parseValue(valStr) {
+            if(!valStr) return 0;
+            let cleanStr = valStr.toString().replace('%', '').replace(/,/g, '');
+            let num = parseFloat(cleanStr);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // เช็คว่า KPI นี้เป็นร้อยละหรือไม่ (เพื่อใส่แกน Y ให้ถูกต้อง)
+        function isPercentage() {
+            return currentKpi.includes('ร้อยละ');
+        }
+
+        // --- ฟังก์ชันวาดกราฟหลัก ---
+        function renderChart(labels, dataValues, levelObj) {
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // จัดการสี
+            const bgColors = labels.map((_, i) => colors[i % colors.length]);
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: currentKpi,
+                        data: dataValues,
+                        backgroundColor: bgColors,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.raw.toLocaleString();
+                                    return isPercentage() ? val + '%' : val + ' คน/ครั้ง';
+                                }
+                            },
+                            titleFont: { family: 'Prompt', size: 14 },
+                            bodyFont: { family: 'Prompt', size: 14 }
+                        }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const indicatorName = indicatorsList[document.getElementById('indicatorSelect').value];
-                                const rawLabel = chartData[indicatorName].labels[context.dataIndex];
-                                return rawLabel;
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: isPercentage() ? 100 : undefined,
+                            ticks: {
+                                font: { family: 'Prompt' },
+                                callback: function(value) {
+                                    return isPercentage() ? value + '%' : value.toLocaleString();
+                                }
                             }
                         },
-                        titleFont: { family: 'Sarabun', size: 14 },
-                        bodyFont: { family: 'Sarabun', size: 14 }
-                    },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'top',
-                        font: {
-                            family: 'Sarabun',
-                            weight: 'bold',
-                            size: 13
-                        },
-                        formatter: function(value, context) {
-                            const indicatorName = indicatorsList[document.getElementById('indicatorSelect').value];
-                            return chartData[indicatorName].labels[context.dataIndex];
+                        x: {
+                            ticks: { font: { family: 'Prompt', size: 13 } }
                         }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'จำนวน / ร้อยละ',
-                            font: { family: 'Sarabun', size: 16 }
-                        },
-                        ticks: {
-                            font: { family: 'Sarabun', size: 14 }
-                        },
-                        grace: '10%'
                     },
-                    x: {
-                        ticks: {
-                            font: { family: 'Sarabun', size: 14 },
-                            autoSkip: false
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const clickedLabel = labels[index];
+                            handleBarClick(clickedLabel, levelObj);
                         }
                     }
                 }
+            });
+        }
+
+        // --- ลอจิกการกดแท่งกราฟ (Drill-down) ---
+        function handleBarClick(clickedLabel, levelObj) {
+            if (levelObj.level === 1) {
+                // กดที่ระดับ 1 -> ไประดับ 2
+                navStack.push({ level: 2, macroGroup: clickedLabel });
+                loadLevel2(clickedLabel);
+            } else if (levelObj.level === 2) {
+                // กดที่ระดับ 2 -> ไประดับ 3
+                navStack.push({ level: 3, macroGroup: levelObj.macroGroup, mainGroup: clickedLabel });
+                loadLevel3(levelObj.macroGroup, clickedLabel);
             }
-        });
-        
-        updateChart();
-    }
+            // ถ้าระดับ 3 จะไม่เจาะลึกลงไปอีก
+        }
 
-    function updateChart() {
-        const select = document.getElementById('indicatorSelect');
-        const indicatorName = indicatorsList[select.value];
-        const data = chartData[indicatorName];
-        
-        myChart.data.datasets[0].data = data.values;
-        myChart.options.scales.y.title.text = data.is_percent ? 'ร้อยละ (%)' : 'จำนวน';
-        
-        myChart.update();
-    }
+        // --- ระดับ 1: ภาพใหญ่ (Macro) ---
+        function loadLevel1() {
+            backBtn.style.display = 'none';
+            breadcrumbText.innerHTML = '<b>ระดับ 1:</b> ภาพรวมทั้งหมดคลิกที่แท่งเพื่อดูรายละเอียด';
+            
+            // กรองข้อมูลเฉพาะแถวที่เป็นภาพใหญ่รวม
+            const filteredData = rawData.filter(row => row['กลุ่มใหญ่'] === 'รวมภาพใหญ่');
+            
+            const labels = filteredData.map(row => row['กลุ่มภาพใหญ่']);
+            const dataValues = filteredData.map(row => parseValue(row[currentKpi]));
 
-    window.onload = initChart;
-</script>
+            renderChart(labels, dataValues, { level: 1 });
+        }
 
+        // --- ระดับ 2: แยกรายกลุ่มใหญ่ (Major Group) ---
+        function loadLevel2(macroGroup) {
+            backBtn.style.display = 'block';
+            breadcrumbText.innerHTML = `<b>ระดับ 2:</b> กลุ่ม ${macroGroup} > คลิกที่แท่งเพื่อดูคลินิกย่อย`;
+
+            // กรอง: หาข้อมูลที่กลุ่มภาพใหญ่ตรงกัน และกลุ่มย่อยขึ้นต้นด้วย "รวม (" (แปลว่าเป็นผลรวมของกลุ่มใหญ่นั้นๆ)
+            let filteredData = rawData.filter(row => 
+                row['กลุ่มภาพใหญ่'] === macroGroup && 
+                row['กลุ่มย่อย'].startsWith('รวม (')
+            );
+
+            // เรียงลำดับจากมากไปน้อย
+            filteredData.sort((a, b) => parseValue(b[currentKpi]) - parseValue(a[currentKpi]));
+
+            const labels = filteredData.map(row => row['กลุ่มใหญ่']);
+            const dataValues = filteredData.map(row => parseValue(row[currentKpi]));
+
+            renderChart(labels, dataValues, { level: 2, macroGroup: macroGroup });
+        }
+
+        // --- ระดับ 3: แยกรายคลินิก (Micro Group) ---
+        function loadLevel3(macroGroup, mainGroup) {
+            backBtn.style.display = 'block';
+            breadcrumbText.innerHTML = `<b>ระดับ 3:</b> ${macroGroup} > แผนก ${mainGroup}`;
+
+            // กรอง: หาข้อมูลที่แผนกตรงกัน และไม่ใช่แถวผลรวม
+            let filteredData = rawData.filter(row => 
+                row['กลุ่มภาพใหญ่'] === macroGroup &&
+                row['กลุ่มใหญ่'] === mainGroup &&
+                !row['กลุ่มย่อย'].startsWith('รวม (') &&
+                row['กลุ่มย่อย'] !== 'รวมภาพใหญ่'
+            );
+
+            // เรียงลำดับจากมากไปน้อย
+            filteredData.sort((a, b) => parseValue(b[currentKpi]) - parseValue(a[currentKpi]));
+
+            const labels = filteredData.map(row => row['กลุ่มย่อย']);
+            const dataValues = filteredData.map(row => parseValue(row[currentKpi]));
+
+            renderChart(labels, dataValues, { level: 3 });
+        }
+    </script>
 </body>
 </html>
