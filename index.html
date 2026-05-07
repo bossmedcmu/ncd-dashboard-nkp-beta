@@ -136,6 +136,7 @@
             display: flex;
             align-items: center;
             flex-wrap: wrap;
+            gap: 8px; /* เพิ่ม gap จัดการระยะห่างระหว่างปุ่ม */
         }
 
         .breadcrumb span.highlight {
@@ -145,7 +146,16 @@
             color: #B45309;
             font-weight: 600;
             font-size: 14px;
-            margin-left: 12px;
+            cursor: pointer; /* ทำให้รู้ว่าคลิกได้ */
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        /* เพิ่ม Hover effect ให้ป้าย Breadcrumb */
+        .breadcrumb span.highlight:hover {
+            background-color: #FDE68A;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .chart-container {
@@ -231,7 +241,6 @@
             select { max-width: 100%; font-size: 14px; padding: 10px 12px; }
             button#backBtn { width: 100%; justify-content: center; margin-top: 8px; }
             .breadcrumb { font-size: 14px; flex-direction: column; align-items: flex-start; gap: 8px; }
-            .breadcrumb span.highlight { margin-left: 0; display: inline-block; margin-top: 4px; }
             .chart-container { height: 50vh; min-height: 300px; }
             .table-container { margin-top: 20px; }
             th, td { padding: 8px 12px; font-size: 12px; }
@@ -843,10 +852,8 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
 
         if (rawData.length > 0) {
             const headers = Object.keys(rawData[0]);
-            // ดึงคอลัมน์ KPI ทั้งหมด (เริ่มที่คอลัมน์ลำดับที่ 6 ใน CSV Index 5)
             const kpiHeaders = headers.slice(5);
             
-            // หาคีย์ของตัวชี้วัดที่ต้องใช้บ่อยๆ (เพื่อจัดเรียงและทำตาราง)
             kpi1Name = headers.find(h => h.startsWith('1. '));
             kpi11Name = headers.find(h => h.startsWith('11. '));
             kpi13Name = headers.find(h => h.startsWith('13. '));
@@ -873,6 +880,12 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
             }
         });
 
+        // ฟังก์ชันสำหรับการคลิกที่ป้าย Breadcrumb เพื่อย้อนกลับไประดับที่เลือก
+        window.navigateToLevel = function(targetIndex) {
+            currentPath = currentPath.slice(0, targetIndex);
+            updateDashboard();
+        };
+
         // ฟังก์ชันค้นหาและอัปเดตกระดานข้อมูล
         function updateDashboard() {
             const level = currentPath.length + 1;
@@ -885,7 +898,6 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
                 let valLevel = row[`Level${level}`];
                 if (!valLevel || valLevel === 'รวม' || valLevel.trim() === '') return false;
                 
-                // เช็คว่า Level ถัดลงไปต้องเป็น 'รวม' (แปลว่าเป็นบรรทัดรวมของ Level ที่เรากำลังสนใจ)
                 for(let i = level + 1; i <= 5; i++) {
                     let valDeeper = row[`Level${i}`];
                     if (valDeeper && valDeeper !== 'รวม' && valDeeper.trim() !== '') return false;
@@ -893,7 +905,6 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
                 return true;
             });
 
-            // เรียงลำดับจากมากไปน้อย "ตามตัวชี้วัดที่ 1 เสมอ" ตามความต้องการ
             filtered.sort((a, b) => {
                 let valA = parseFloat(a[kpi1Name]) || 0;
                 let valB = parseFloat(b[kpi1Name]) || 0;
@@ -903,16 +914,24 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
             let labels = filtered.map(row => row[`Level${level}`]);
             let dataValues = filtered.map(row => parseFloat(row[currentKpi]) || 0);
 
-            // แสดงเส้นทาง (Breadcrumb) และปุ่มย้อนกลับ
+            // ส่วนสร้างเส้นทาง (Breadcrumb) ที่แก้ไขให้คลิกได้
             const breadcrumbText = document.getElementById('breadcrumbText');
             const backBtn = document.getElementById('backBtn');
+            
+            // ปุ่ม "ภาพรวม" เสมอเป็น Index 0
+            let breadcrumbsHTML = `<span class="highlight" onclick="navigateToLevel(0)" title="คลิกเพื่อกลับไปภาพรวม">📍 ระดับ 1: ภาพรวม</span>`;
+            
             if (currentPath.length > 0) {
-                breadcrumbText.innerHTML = `📍 ระดับ ${level}: ` + currentPath.map(p => `<span class="highlight">${p}</span>`).join(' &rsaquo; ');
+                currentPath.forEach((pathItem, index) => {
+                    // แต่ละระดับจะเรียก navigateToLevel ตาม index ของตัวเอง
+                    breadcrumbsHTML += `<span style="color: #94A3B8;">&rsaquo;</span> <span class="highlight" onclick="navigateToLevel(${index + 1})" title="คลิกเพื่อกลับไประดับนี้">${pathItem}</span>`;
+                });
                 backBtn.style.display = 'flex';
             } else {
-                breadcrumbText.innerHTML = "📍 ระดับ 1: ภาพรวม";
                 backBtn.style.display = 'none';
             }
+            
+            breadcrumbText.innerHTML = breadcrumbsHTML;
 
             renderChart(labels, dataValues);
             renderTable(labels, filtered);
@@ -922,7 +941,6 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
         function renderChart(labels, dataValues) {
             const ctx = document.getElementById('myChart').getContext('2d');
             
-            // ทำให้ Animation เริ่มต้นใหม่เสมอโดยการทำลายอันเก่าทิ้ง กราฟจะ Grow from bottom เสมอ
             if (window.myChartInstance) {
                 window.myChartInstance.destroy();
             }
@@ -996,7 +1014,6 @@ Level1,Level2,Level3,Level4,Level5,1. จำนวนรับบริการ
                         event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
                     },
                     onClick: (e, activeElements) => {
-                        // เช็คการจำกัดเจาะลึกที่ 5 ระดับ (index อาเรย์ที่ 0 ถึง 4)
                         if (activeElements.length > 0) {
                             const idx = activeElements[0].index;
                             const clickedLabel = window.myChartInstance.data.labels[idx];
