@@ -198,7 +198,7 @@
             font-weight: 600;
             text-align: center;
         }
-        th:first-child, td:first-child {
+		th:first-child, td:first-child {
             text-align: left;
             position: sticky;
             left: 0;
@@ -206,7 +206,9 @@
             z-index: 1;
             box-shadow: 2px 0 5px rgba(0,0,0,0.05);
             border-right: 2px solid #E2E8F0;
-            min-width: 150px;
+            width: 1%;              /* บังคับให้คอลัมน์แรกหดชิดซ้ายพอดีกับข้อความเสมอ */
+            min-width: 130px;       /* กำหนดความกว้างขั้นต่ำให้พอดีกับคำว่า DM (เบาหวาน) */
+            max-width: 150px;       /* ล็อกไม่ให้คอลัมน์แรกยืดออกเมื่อมีคอลัมน์น้อย */
         }
         th:first-child {
             background-color: var(--primary-light);
